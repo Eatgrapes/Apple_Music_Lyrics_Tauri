@@ -1,5 +1,22 @@
-// 添加上传音乐文件功能
+// 添加响应式缩放功能
+function updateAppScale() {
+  const appContainer = document.querySelector('.app-container');
+  if (!appContainer) return;
+  
+  const scaleX = window.innerWidth / 1600;
+  const scaleY = window.innerHeight / 720;
+  const scale = Math.min(scaleX, scaleY);
+  
+  appContainer.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+
+// 页面加载完成后初始化缩放
 document.addEventListener('DOMContentLoaded', function () {
+  updateAppScale();
+  
+  // 窗口大小改变时更新缩放
+  window.addEventListener('resize', updateAppScale);
+  
   // 禁用页面默认拖拽行为
   document.addEventListener('dragover', function(e) {
     e.preventDefault();
@@ -360,6 +377,30 @@ document.addEventListener('DOMContentLoaded', function () {
   let dragStartX = 0;
   let progressStartPos = 0;
   
+  // 获取当前进度
+  function getCurrentProgress() {
+    if (!progressFill) return 0;
+    const width = parseFloat(progressFill.style.width || '0');
+    return width / 100;
+  }
+  
+  // 更新进度条显示
+  function updateProgress(e) {
+    if (!progressContainer || !progressFill || !progressHandle) return;
+    
+    const rect = progressContainer.getBoundingClientRect();
+    const pos = (e.clientX - rect.left) / rect.width;
+    const percentage = Math.min(Math.max(pos, 0), 1);
+    
+    progressFill.style.width = `${percentage * 100}%`;
+    progressHandle.style.left = `${percentage * 100}%`;
+    
+    // 如果有音频元素，更新播放位置
+    if (audioElement) {
+      audioElement.currentTime = percentage * audioDuration;
+    }
+  }
+  
   // 添加鼠标样式提示
   progressContainer.style.cursor = 'pointer';
   
@@ -701,3 +742,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 });
+
+// 页面加载时也更新一次缩放
+window.addEventListener('load', updateAppScale);
