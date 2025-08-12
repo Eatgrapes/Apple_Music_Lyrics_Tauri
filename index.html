@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AMLT - Apple Music Lyrics Tauri</title>
+  <link rel="stylesheet" href="css/style.css">
+  <meta name="description" content="Apple Music Lyrics Tauri App">
+
+  <link rel="icon" href="./favicon.ico" sizes="any">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon.png">
+
+  <link rel="manifest" href="./site.webmanifest">
+  <meta name="theme-color" content="#fafafa">
+</head>
+
+<body>
+  <div class="upload-container">
+    <div class="upload-box">
+      <div class="plus-icon">+</div>
+    </div>
+    <div class="song-title"></div>
+    <div class="song-artist"></div>
+    <div class="more-button">
+      <img src="icon/more.png" alt="More options" class="more-icon">
+    </div>
+    <div class="progress-time progress-time-left">0:00</div>
+    <div class="progress-time progress-time-right">-0:00</div>
+    <div class="progress-container">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+        <div class="progress-handle"></div>
+      </div>
+    </div>
+    <div class="play-button-container">
+      <img src="icon/play.svg" alt="Play" class="play-button">
+    </div>
+    <div class="volume-container">
+      <img src="icon/volume_low.svg" alt="Volume low" class="volume-icon volume-low">
+      <div class="volume-bar">
+        <div class="volume-fill"></div>
+      </div>
+      <img src="icon/volume_high.svg" alt="Volume high" class="volume-icon volume-high">
+    </div>
+  </div>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

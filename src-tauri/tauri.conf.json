@@ -1,0 +1,43 @@
+{
+  "build": {
+    "beforeDevCommand": "npm run start",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:8080",
+    "distDir": "../dist",
+    "withGlobalTauri": true
+  },
+  "package": {
+    "productName": "AMLT - Apple Music Lyrics Tauri",
+    "version": "0.0.1"
+  },
+  "tauri": {
+    "allowlist": {
+      "all": false,
+      "shell": {
+        "all": false,
+        "open": true
+      }
+    },
+    "bundle": {
+      "active": true,
+      "targets": "all",
+      "identifier": "com.amlt.app",
+      "icon": [
+        "../icon.png"
+      ]
+    },
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "fullscreen": false,
+        "resizable": true,
+        "title": "AMLT - Apple Music Lyrics Tauri",
+        "width": 800,
+        "height": 600,
+        "maximized": true
+      }
+    ]
+  }
+}
