@@ -241,8 +241,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
           // 读取完成后的处理
           reader.onload = function (event) {
-            // 创建音频元素
+            // 停止并移除现有的音频元素
             if (audioElement) {
+              if (isPlaying) {
+                audioElement.pause();
+                isPlaying = false;
+                clearInterval(progressUpdateInterval);
+                updatePlayButton();
+              }
               audioElement.remove();
             }
             
