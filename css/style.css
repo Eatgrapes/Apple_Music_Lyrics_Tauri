@@ -554,15 +554,15 @@ body {
 .lyrics-container {
   position: absolute;
   left: 620px; /* 靠左位置 */
-  top: 180px; /* 向下移动 */
+  top: 160px; /* 往上移动，从180px调整为160px */
   width: 900px;
   height: 550px;
   z-index: 999999; /* 最高层级 */
-  pointer-events: none; /* 避免拦截鼠标事件 */
+  pointer-events: auto; /* 允许鼠标事件 */
   padding-left: 30px; /* 左侧内边距 */
   padding-right: 50px;
   box-sizing: border-box; /* 修复错误：正确值应为border-box */
-  overflow: visible; /* 允许内容超出容器 */
+  overflow: hidden; /* 隐藏超出容器的内容 */
 }
 
 .lyrics-content {
@@ -578,15 +578,15 @@ body {
   width: 800px;
   text-align: left;
   color: rgba(255, 255, 255, 0.5); /* 默认半透明 */
-  font-size: 40px; /* 调小字体大小 */
+  font-size: 54px; /* 默认字体大小 */
   font-weight: 600;
-  transition: all 0.5s ease;
+  transition: transform 0.5s ease, opacity 0.5s ease, font-size 0.5s ease, filter 0.5s ease;
   white-space: normal; /* 允许自动换行 */
   overflow: visible; /* 允许内容超出 */
   text-overflow: ellipsis;
   padding: 0;
   box-sizing: border-box;
-  line-height: 1.4;
+  line-height: 1.6; /* 增大行高 */
   z-index: 999999; /* 最高层级 */
   left: 0;
   transform: translate(0, 0); /* 固定水平位置 */
@@ -596,12 +596,29 @@ body {
 
 .lyric-line.active {
   color: white;
-  font-size: 40px; /* 与默认大小相同，移除放大效果 */
+  font-size: 56px; /* 当前播放歌词字体大小 */
   z-index: 1000000; /* 当前播放歌词在最上层 */
 }
 
 .lyric-line.past {
   color: rgba(255, 255, 255, 0.3);
+  font-size: 54px; /* 已播放歌词字体大小稍微小一点 */
+}
+
+/* 换行歌词的固定布局样式 */
+.lyric-line.wrapping {
+  font-size: 54px !important; /* 固定字体大小，防止被JavaScript覆盖 */
+  line-height: 1.6 !important; /* 固定行高 */
+  /* 可以添加其他固定样式 */
+}
+
+/* 确保换行歌词在各种状态下的字体大小 */
+.lyric-line.wrapping.active {
+  font-size: 54px !important;
+}
+
+.lyric-line.wrapping.past {
+  font-size: 54px !important;
 }
 
 .no-lyrics {

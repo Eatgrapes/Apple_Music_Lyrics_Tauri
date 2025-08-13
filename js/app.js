@@ -10,12 +10,21 @@ function updateAppScale() {
   appContainer.style.transform = `translate(-50%, -50%) scale(${scale})`;
 }
 
+// 全局变量
+let currentLyricIndex = 0; // 当前播放歌词索引
+let actualLyricIndex = 0; // 实际播放的歌词索引（用于滚动模式）
+let lyricElements = []; // 歌词元素数组
+let isScrolling = false; // 是否处于滚动模式
+let scrollTimer = null; // 滚动计时器
+let lastScrollTime = 0; // 上次滚动时间
+let lyrics = []; // 存储歌词数据
+
 // 页面加载完成后初始化缩放
 document.addEventListener('DOMContentLoaded', function () {
   updateAppScale();
   
-  // 窗口大小改变时更新缩放
-  window.addEventListener('resize', updateAppScale);
+  // 初始化歌词功能
+  initLyrics();
   
   // 禁用页面默认拖拽行为
   document.addEventListener('dragover', function(e) {
@@ -35,9 +44,12 @@ document.addEventListener('DOMContentLoaded', function () {
   let audioElement = null; // 音频元素
   let isPlaying = false; // 播放状态
   let progressUpdateInterval = null; // 进度更新定时器
-  let lyrics = []; // 存储歌词数据
-  let lyricElements = []; // 存储歌词元素
-  let currentLyricIndex = -1; // 当前歌词索引
+  // lyrics 已在全局声明
+  // lyricElements 已在全局声明
+  // currentLyricIndex 已在全局声明
+  // isScrolling 已在全局声明
+  // scrollTimer 已在全局声明
+  // lastScrollTime 已在全局声明
 
   // 更新歌曲标题和创作人的通用函数
   function updateSongInfo(title, artist) {
@@ -113,39 +125,92 @@ document.addEventListener('DOMContentLoaded', function () {
       // 设置初始位置
       lyricElement.style.transform = 'translate(0, 0)';
       lyricElement.style.opacity = '0.5';
+      lyricElement.style.fontSize = '54px'; // 统一初始字体大小
+      
+      // 添加点击事件监听器
+      lyricElement.addEventListener('click', () => {
+        if (isScrolling) {
+          // 在滚动模式下，点击歌词跳转到对应时间
+          if (window.ipcRenderer) {
+            window.ipcRenderer.send('seek-to-time', lyric.time);
+          } else if (audioElement) {
+            // 如果没有ipcRenderer，直接设置audio元素的时间
+            audioElement.currentTime = lyric.time;
+          }
+        }
+      });
+      
       lyricsContainer.appendChild(lyricElement);
       lyricElements.push(lyricElement);
     });
     
+    // 强制重排以计算实际高度
+    lyricsContainer.offsetHeight;
+    
     // 初始化位置
-    updateLyricPositions();
+    updateLyricsDisplay();
   }
 
   // 更新歌词位置
   function updateLyricPositions() {
-    const startY = 50; // 起始位置靠上
-    const lineSpacing = 100; // 增加行间距，从90调整为100
-    const maxVisibleLyrics = 3; // 调整为3，这样当前歌词+上下各3行=总共7行，但会限制显示6个
+    const startY = 30; // 调整起始位置
+    const lineSpacing = 120; // 行间距
+    const maxVisibleLyrics = 3; // 显示歌词数量
+    const baseLineHeight = 90; // 基础行高
+    
+    // 只在第一次调用时或者lyricElements为空时计算高度
+    if (!window.lyricInfo) {
+      // 预计算每行歌词的高度，并固定换行状态
+      window.lyricInfo = lyricElements.map(element => {
+        const height = element.scrollHeight;
+        const isWrapping = height > baseLineHeight;
+        
+        // 固定换行歌词的样式，确保不会被后续变化影响
+        if (isWrapping) {
+          element.classList.add('wrapping');
+          // 锁定换行歌词的字体大小，防止被动态变化影响
+          element.style.fontSize = '54px !important';
+        }
+        
+        return {
+          element: element,
+          height: height,
+          isWrapping: isWrapping
+        };
+      });
+    }
+    
+    // 计算每行歌词的累积位置
+    let cumulativeOffset = 0;
+    const lyricPositions = lyricElements.map((element, index) => {
+      const info = window.lyricInfo[index];
+      const height = info.height;
+      const position = cumulativeOffset;
+      
+      // 如果是换行歌词，增加额外的高度（影响后续歌词）
+      if (height > baseLineHeight) {
+        cumulativeOffset += (height - baseLineHeight);
+      }
+      
+      return position;
+    });
+    
+    // 计算当前播放歌词之前的累积偏移量，用于动态调整整体位置
+    let currentLyricOffset = 0;
+    if (currentLyricIndex >= 0 && currentLyricIndex < lyricPositions.length) {
+      currentLyricOffset = lyricPositions[currentLyricIndex] || 0;
+    }
     
     lyricElements.forEach((element, index) => {
       // 基于索引计算固定位置
       const distance = index - currentLyricIndex;
-      let positionY = startY + distance * lineSpacing;
       
-      // 为换行的歌词增加额外的垂直空间
-      if (element.scrollHeight > 80) { // 如果歌词高度超过单行高度
-        const extraHeight = element.scrollHeight - 80; // 计算超出部分
-        positionY += extraHeight / 2; // 为当前歌词增加额外空间
-        
-        // 为后续歌词增加额外空间
-        if (distance > 0) {
-          positionY += extraHeight;
-        }
-      }
+      // 使用累积位置计算Y坐标，并减去当前歌词的累积偏移量以实现动态调整
+      let positionY = startY + distance * lineSpacing + (lyricPositions[index] || 0) - currentLyricOffset;
       
       // 限制显示的歌词数量为6个
       // 优先显示未播放的歌词，已播放的最多停留一个
-      if (distance < 0 && Math.abs(distance) > 1) {
+      if (distance < -1) { // 只保留一个已播放的歌词（索引小于当前索引-1的都隐藏）
         // 隐藏多余的已播放歌词（只保留一个）
         element.style.opacity = 0;
         element.style.transform = `translate(0, ${positionY}px)`;
@@ -162,32 +227,52 @@ document.addEventListener('DOMContentLoaded', function () {
       }
       
       // 根据是否为当前播放歌词设置样式
-      let opacity, blur;
+      let opacity, blur, fontSize;
       
       if (distance === 0) {
         // 当前播放的歌词
         opacity = 1;
         blur = 0;
+        // 检查是否为换行歌词，如果是则保持固定字体大小
+        const isWrapping = window.lyricInfo[index].isWrapping;
+        fontSize = isWrapping ? '54px' : '56px';
         element.classList.add('active');
         element.classList.remove('past');
       } else {
         // 未播放的歌词（包括已播放和未播放）
-        opacity = 0.5; // 固定透明度
+        opacity = 0.5;
+        
+        // 根据距离设置字体大小，但换行歌词保持固定字体大小
+        const isWrapping = window.lyricInfo[index].isWrapping;
+        if (isWrapping) {
+          // 换行歌词保持固定字体大小
+          fontSize = '54px';
+        } else if (distance === 1) {
+          fontSize = '52px'; // 下一行歌词稍小
+        } else if (distance === 2) {
+          fontSize = '48px'; // 下二行歌词更小
+        } else if (distance === 3) {
+          fontSize = '44px'; // 下三行歌词最小
+        } else {
+          fontSize = '50px'; // 默认大小（稍微小一点）
+        }
         
         // 添加轻微模糊效果，距离越远模糊越强
-        blur = Math.abs(distance) * 1.5; // 轻微模糊，距离越远越模糊
+        blur = Math.abs(distance) * 1.5;
         
         element.classList.remove('active');
         if (distance < 0) {
           element.classList.add('past');
+          fontSize = isWrapping ? '54px' : '54px'; // 已播放歌词字体大小稍微小一点
         } else {
           element.classList.remove('past');
         }
       }
       
-      // 应用样式，只在Y轴上移动，保持X轴固定和固定大小
+      // 应用样式，只在Y轴上移动，保持X轴固定
       element.style.transform = `translate(0, ${positionY}px)`;
       element.style.opacity = opacity;
+      element.style.fontSize = fontSize;
       
       // 应用模糊效果
       if (blur > 0) {
@@ -219,6 +304,14 @@ document.addEventListener('DOMContentLoaded', function () {
       currentLyricIndex = newIndex;
       updateLyricPositions();
     }
+  }
+  
+  // 获取当前滚动状态
+  function getScrollState() {
+    return {
+      isScrolling: isScrolling,
+      timeSinceLastScroll: Date.now() - lastScrollTime
+    };
   }
 
   // 点击上传区域时触发文件选择
@@ -252,6 +345,9 @@ document.addEventListener('DOMContentLoaded', function () {
               audioElement.remove();
             }
             
+            // 重置歌词信息
+            window.lyricInfo = undefined;
+            
             audioElement = new Audio(URL.createObjectURL(file));
             
             // 设置默认音量为最大
@@ -260,7 +356,10 @@ document.addEventListener('DOMContentLoaded', function () {
             // 监听音频播放结束事件
             audioElement.addEventListener('ended', function() {
               isPlaying = false;
+              clearInterval(progressUpdateInterval);
               updatePlayButton();
+              // 重置进度显示
+              resetProgress();
             });
             
             // 尝试读取音频文件的封面
@@ -408,8 +507,8 @@ document.addEventListener('DOMContentLoaded', function () {
           showUnknownIcon();
           // 使用文件名作为标题
           const title = file.name.replace(/\.[^/.]+$/, "") || "Null";
-          // 更新歌曲标题
-          updateSongTitle(title);
+          // 更新歌曲信息
+          updateSongInfo(title, null);
           // 恢复默认背景
           removeBackgroundBlur();
         }
@@ -540,14 +639,13 @@ document.addEventListener('DOMContentLoaded', function () {
     // 使用从音频文件获取的实际时长，而不是固定的180秒
     const totalTime = audioDuration;
     
-    // 获取当前进度
-    const rect = progressContainer.getBoundingClientRect();
-    const progressWidth = progressFill.offsetWidth;
-    const containerWidth = rect.width;
-    const progressRatio = containerWidth > 0 ? progressWidth / containerWidth : 0;
+    // 直接使用音频元素的当前时间，而不是通过进度条计算
+    let currentTime = 0;
+    if (audioElement) {
+      currentTime = audioElement.currentTime;
+    }
     
-    // 计算已播放时间和剩余时间
-    const currentTime = totalTime * progressRatio;
+    // 计算剩余时间
     const remainingTime = totalTime - currentTime;
     
     // 更新时间显示
@@ -980,6 +1078,176 @@ document.addEventListener('DOMContentLoaded', function () {
     // 如果有音频元素，设置音量
     if (audioElement) {
       audioElement.volume = pos;
+    }
+  }
+  
+  // 初始化歌词显示
+  function initLyrics() {
+    const lyricsContainer = document.querySelector('.lyrics-container');
+    if (!lyricsContainer) return;
+
+    // 添加鼠标滚轮事件监听器
+    lyricsContainer.addEventListener('wheel', handleLyricsScroll, { passive: false });
+    
+    // 添加鼠标进入和离开事件监听器
+    lyricsContainer.addEventListener('mouseenter', () => {
+      console.log('Mouse entered lyrics container, clearing scroll timer');
+      if (scrollTimer) {
+        clearTimeout(scrollTimer);
+        scrollTimer = null;
+      }
+    });
+    
+    lyricsContainer.addEventListener('mouseleave', () => {
+      console.log('Mouse left lyrics container, resetting scroll mode');
+      resetScrollMode();
+    });
+    
+    createLyricElements();
+  }
+
+  // 处理歌词滚动事件
+  function handleLyricsScroll(event) {
+    event.preventDefault();
+    
+    if (!lyricElements.length) return;
+    
+    // 设置为滚动模式
+    isScrolling = true;
+    lastScrollTime = Date.now();
+    
+    // 清除之前的计时器
+    if (scrollTimer) {
+      clearTimeout(scrollTimer);
+    }
+    
+    // 设置5秒后自动恢复的计时器
+    scrollTimer = setTimeout(() => {
+      console.log('Auto reset scroll mode after 5 seconds');
+      resetScrollMode();
+    }, 5000);
+    
+    // 计算滚动方向和距离（支持一次滚动多行）
+    const delta = Math.sign(event.deltaY);
+    const linesToScroll = Math.floor(Math.abs(event.deltaY) / 100) + 1; // 根据滚动量确定滚动行数
+    
+    // 更新当前歌词索引（限制在有效范围内）
+    const previousIndex = currentLyricIndex;
+    currentLyricIndex = Math.max(0, Math.min(lyrics.length - 1, currentLyricIndex + delta * linesToScroll));
+    
+    console.log(`Scrolling from index ${previousIndex} to ${currentLyricIndex}`);
+    
+    // 更新歌词显示
+    updateLyricsDisplay();
+  }
+
+  // 重置滚动模式
+  function resetScrollMode() {
+    console.log('Resetting scroll mode');
+    isScrolling = false;
+    if (scrollTimer) {
+      clearTimeout(scrollTimer);
+      scrollTimer = null;
+    }
+    // 重置当前歌词索引为实际播放的歌词索引
+    currentLyricIndex = actualLyricIndex;
+    updateLyricsDisplay();
+  }
+
+  // 更新歌词显示（根据是否处于滚动模式）
+  function updateLyricsDisplay() {
+    if (isScrolling) {
+      updateLyricsForScrollMode();
+    } else {
+      updateLyricPositions();
+    }
+  }
+
+  // 滚动模式下的歌词显示更新
+  function updateLyricsForScrollMode() {
+    const startY = 30;
+    const lineSpacing = 100; // 滚动模式下使用不同的行间距
+    
+    lyricElements.forEach((element, index) => {
+      // 计算相对于滚动位置的位置
+      const distance = index - currentLyricIndex;
+      const positionY = startY + distance * lineSpacing;
+      
+      // 滚动模式下所有歌词使用大号字体
+      element.style.fontSize = '56px';
+      
+      // 设置透明度（当前滚动位置的歌词完全不透明，其他歌词半透明）
+      const opacity = (distance === 0) ? 1 : 0.7;
+      
+      // 应用样式
+      element.style.transform = `translate(0, ${positionY}px)`;
+      element.style.opacity = opacity;
+      
+      // 在滚动模式下移除所有模糊效果
+      element.style.filter = 'none';
+      
+      // 移除所有状态类
+      element.classList.remove('active', 'past', 'wrapping');
+      
+      // 为当前滚动位置的歌词添加特殊样式
+      if (distance === 0) {
+        element.classList.add('active');
+      }
+      
+      // 为实际播放的歌词添加视觉指示
+      if (index === actualLyricIndex && actualLyricIndex !== currentLyricIndex) {
+        // 添加左侧边框来标识实际播放的歌词
+        element.style.borderLeft = '3px solid white';
+      } else {
+        element.style.borderLeft = 'none';
+      }
+    });
+  }
+
+  // 更新歌词视觉状态（在滚动模式下反映实际播放位置）
+  function updateLyricsVisualState() {
+    if (!isScrolling) return;
+    
+    lyricElements.forEach((element, index) => {
+      // 移除所有状态类
+      element.classList.remove('active', 'past');
+      
+      // 根据实际播放位置设置状态类
+      if (index === actualLyricIndex) {
+        element.classList.add('active');
+      } else if (index < actualLyricIndex) {
+        element.classList.add('past');
+      }
+      
+      // 保持滚动模式的样式
+      element.style.fontSize = '56px';
+      element.style.filter = 'none';
+    });
+  }
+
+  // 播放指定时间的歌词
+  function playLyricByTime(currentTime) {
+    if (!lyrics.length) return;
+    
+    // 查找当前时间对应的歌词索引
+    let targetIndex = 0;
+    for (let i = 0; i < lyrics.length; i++) {
+      if (lyrics[i].time > currentTime) break;
+      targetIndex = i;
+    }
+    
+    // 更新实际播放的歌词索引
+    actualLyricIndex = targetIndex;
+    
+    // 只有在非滚动模式下才更新当前歌词索引
+    if (!isScrolling && currentLyricIndex !== targetIndex) {
+      currentLyricIndex = targetIndex;
+      updateLyricsDisplay(); // 使用新的更新函数
+    }
+    
+    // 在滚动模式下，仍需要更新歌词的视觉状态以反映实际播放位置
+    if (isScrolling) {
+      updateLyricsVisualState();
     }
   }
 });
