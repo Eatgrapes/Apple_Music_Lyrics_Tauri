@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', function () {
   let audioElement = null; // 音频元素
   let isPlaying = false; // 播放状态
   let progressUpdateInterval = null; // 进度更新定时器
+  let lyrics = []; // 存储歌词数据
+  let lyricElements = []; // 存储歌词元素
+  let currentLyricIndex = -1; // 当前歌词索引
 
   // 更新歌曲标题和创作人的通用函数
   function updateSongInfo(title, artist) {
@@ -53,6 +56,168 @@ document.addEventListener('DOMContentLoaded', function () {
       } else {
         artistElement.classList.remove('show');
       }
+    }
+  }
+
+  // 解析 LRC 歌词文本
+  function parseLyrics(lrcText) {
+    if (!lrcText) return [];
+    
+    const lines = lrcText.split(/\r?\n/);
+    const lyrics = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      // 匹配时间标签 [mm:ss.xx] 或 [mm:ss]
+      const timeMatches = line.matchAll(/\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/g);
+      const text = line.replace(/\[\d{2}:\d{2}(?:\.\d{2,3})?\]/g, '').trim();
+      
+      // 处理一行中可能包含多个时间标签的情况
+      for (const match of timeMatches) {
+        const minute = parseInt(match[1]);
+        const second = parseInt(match[2]);
+        // 处理毫秒部分，如果不存在则为0
+        const millisecond = match[3] ? parseInt(match[3].padEnd(3, '0').substring(0, 3)) : 0;
+        const time = minute * 60 + second + millisecond / 1000;
+        
+        // 只有非空歌词才添加
+        if (text) {
+          lyrics.push({
+            time: time,
+            text: text
+          });
+        }
+      }
+    }
+    
+    // 按时间排序
+    lyrics.sort((a, b) => a.time - b.time);
+    return lyrics;
+  }
+
+  // 创建歌词显示元素
+  function createLyricElements() {
+    const lyricsContainer = document.querySelector('.lyrics-content');
+    if (!lyricsContainer) return;
+    
+    // 清空现有歌词
+    lyricsContainer.innerHTML = '';
+    lyricElements = [];
+    
+    // 为每句歌词创建元素
+    lyrics.forEach((lyric, index) => {
+      const lyricElement = document.createElement('div');
+      lyricElement.className = 'lyric-line';
+      lyricElement.textContent = lyric.text;
+      lyricElement.dataset.time = lyric.time;
+      // 设置初始位置
+      lyricElement.style.transform = 'translate(0, 0)';
+      lyricElement.style.opacity = '0.5';
+      lyricsContainer.appendChild(lyricElement);
+      lyricElements.push(lyricElement);
+    });
+    
+    // 初始化位置
+    updateLyricPositions();
+  }
+
+  // 更新歌词位置
+  function updateLyricPositions() {
+    const startY = 50; // 起始位置靠上
+    const lineSpacing = 100; // 增加行间距，从90调整为100
+    const maxVisibleLyrics = 3; // 调整为3，这样当前歌词+上下各3行=总共7行，但会限制显示6个
+    
+    lyricElements.forEach((element, index) => {
+      // 基于索引计算固定位置
+      const distance = index - currentLyricIndex;
+      let positionY = startY + distance * lineSpacing;
+      
+      // 为换行的歌词增加额外的垂直空间
+      if (element.scrollHeight > 80) { // 如果歌词高度超过单行高度
+        const extraHeight = element.scrollHeight - 80; // 计算超出部分
+        positionY += extraHeight / 2; // 为当前歌词增加额外空间
+        
+        // 为后续歌词增加额外空间
+        if (distance > 0) {
+          positionY += extraHeight;
+        }
+      }
+      
+      // 限制显示的歌词数量为6个
+      // 优先显示未播放的歌词，已播放的最多停留一个
+      if (distance < 0 && Math.abs(distance) > 1) {
+        // 隐藏多余的已播放歌词（只保留一个）
+        element.style.opacity = 0;
+        element.style.transform = `translate(0, ${positionY}px)`;
+        element.style.filter = 'blur(10px)';
+        return;
+      }
+      
+      if (Math.abs(distance) > maxVisibleLyrics) {
+        // 隐藏超出范围的歌词
+        element.style.opacity = 0;
+        element.style.transform = `translate(0, ${positionY}px)`;
+        element.style.filter = 'blur(10px)';
+        return;
+      }
+      
+      // 根据是否为当前播放歌词设置样式
+      let opacity, blur;
+      
+      if (distance === 0) {
+        // 当前播放的歌词
+        opacity = 1;
+        blur = 0;
+        element.classList.add('active');
+        element.classList.remove('past');
+      } else {
+        // 未播放的歌词（包括已播放和未播放）
+        opacity = 0.5; // 固定透明度
+        
+        // 添加轻微模糊效果，距离越远模糊越强
+        blur = Math.abs(distance) * 1.5; // 轻微模糊，距离越远越模糊
+        
+        element.classList.remove('active');
+        if (distance < 0) {
+          element.classList.add('past');
+        } else {
+          element.classList.remove('past');
+        }
+      }
+      
+      // 应用样式，只在Y轴上移动，保持X轴固定和固定大小
+      element.style.transform = `translate(0, ${positionY}px)`;
+      element.style.opacity = opacity;
+      
+      // 应用模糊效果
+      if (blur > 0) {
+        element.style.filter = `blur(${blur}px)`;
+      } else {
+        element.style.filter = 'none';
+      }
+    });
+  }
+
+  // 更新当前歌词高亮
+  function updateCurrentLyric() {
+    if (!audioElement || lyrics.length === 0) return;
+    
+    const currentTime = audioElement.currentTime;
+    let newIndex = -1;
+    
+    // 找到当前应该高亮的歌词
+    for (let i = 0; i < lyrics.length; i++) {
+      if (lyrics[i].time <= currentTime) {
+        newIndex = i;
+      } else {
+        break;
+      }
+    }
+    
+    // 如果当前歌词索引发生变化，更新显示
+    if (newIndex !== currentLyricIndex) {
+      currentLyricIndex = newIndex;
+      updateLyricPositions();
     }
   }
 
@@ -138,6 +303,9 @@ document.addEventListener('DOMContentLoaded', function () {
                     // 恢复默认背景
                     removeBackgroundBlur();
                   }
+                  
+                  // 尝试加载嵌入的歌词
+                  loadEmbeddedLyrics(tag);
                   
                   // 显示更多操作按钮
                   const moreButton = document.querySelector('.more-button');
@@ -252,6 +420,78 @@ document.addEventListener('DOMContentLoaded', function () {
     fileInput.click();
   });
 
+  // 加载嵌入的歌词
+  function loadEmbeddedLyrics(tag) {
+    // 安全地尝试从不同标签读取歌词
+    let lyricsText = null;
+    
+    try {
+      // 尝试直接的 lyrics 标签
+      if (tag.tags.lyrics) {
+        if (typeof tag.tags.lyrics === 'string') {
+          lyricsText = tag.tags.lyrics;
+        } else if (typeof tag.tags.lyrics === 'object' && tag.tags.lyrics.lyrics) {
+          lyricsText = tag.tags.lyrics.lyrics;
+        }
+      }
+      
+      // 如果没有找到歌词，尝试 USLT 标签 (Unsynchronised lyric/text transcription)
+      if (!lyricsText && tag.tags.USLT) {
+        if (typeof tag.tags.USLT === 'string') {
+          lyricsText = tag.tags.USLT;
+        } else if (Array.isArray(tag.tags.USLT)) {
+          // 如果是数组，尝试获取第一个元素的歌词
+          if (tag.tags.USLT.length > 0) {
+            const uslt = tag.tags.USLT[0];
+            if (typeof uslt === 'string') {
+              lyricsText = uslt;
+            } else if (uslt.lyrics) {
+              lyricsText = uslt.lyrics;
+            } else if (uslt.text) {
+              lyricsText = uslt.text;
+            }
+          }
+        } else if (typeof tag.tags.USLT === 'object') {
+          if (tag.tags.USLT.lyrics) {
+            lyricsText = tag.tags.USLT.lyrics;
+          } else if (tag.tags.USLT.text) {
+            lyricsText = tag.tags.USLT.text;
+          }
+        }
+      }
+      
+      // 尝试 TXXX 标签
+      if (!lyricsText && tag.tags.TXXX) {
+        if (Array.isArray(tag.tags.TXXX)) {
+          // 查找描述为 LYRICS 的标签
+          const lyricsTag = tag.tags.TXXX.find(item => 
+            item && item.description && item.description.toUpperCase() === 'LYRICS');
+          if (lyricsTag && lyricsTag.data) {
+            lyricsText = lyricsTag.data;
+          }
+        } else if (tag.tags.TXXX.description && 
+                   tag.tags.TXXX.description.toUpperCase() === 'LYRICS' && 
+                   tag.tags.TXXX.data) {
+          lyricsText = tag.tags.TXXX.data;
+        }
+      }
+    } catch (e) {
+      console.log('Error reading lyrics tags:', e);
+    }
+    
+    if (lyricsText) {
+      lyrics = parseLyrics(lyricsText);
+      createLyricElements();
+    } else {
+      // 如果没有嵌入歌词，清空歌词显示
+      lyrics = [];
+      const lyricsContainer = document.querySelector('.lyrics-content');
+      if (lyricsContainer) {
+        lyricsContainer.innerHTML = '<div class="no-lyrics">No embedded lyrics found</div>';
+      }
+    }
+  }
+
   // 进度条交互逻辑
   const progressContainer = document.querySelector('.progress-container');
   const progressBar = document.querySelector('.progress-bar');
@@ -312,6 +552,9 @@ document.addEventListener('DOMContentLoaded', function () {
     if (progressTimeRight) {
       progressTimeRight.textContent = `-${formatTime(remainingTime)}`;
     }
+    
+    // 更新歌词显示
+    updateCurrentLyric();
   }
   
   // 在jsmediatags读取音频文件成功后设置音频时长
@@ -331,13 +574,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!progressContainer.classList.contains('dragging')) {
       progressContainer.classList.add('expanded');
     }
-    // 调整时间文字位置
-    if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
-      progressTimeLeft.style.top = '530px';
-    }
-    if (progressTimeRight && progressTimeRight.classList.contains('show')) {
-      progressTimeRight.style.top = '530px';
-    }
+    // 注释掉调整时间文字位置的代码，保持位置固定
+    // if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
+    //   progressTimeLeft.style.top = '530px';
+    // }
+    // if (progressTimeRight && progressTimeRight.classList.contains('show')) {
+    //   progressTimeRight.style.top = '530px';
+    // }
   });
   
   // 鼠标离开进度条区域
@@ -345,13 +588,13 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!progressContainer.classList.contains('dragging')) {
       progressContainer.classList.remove('expanded');
     }
-    // 恢复时间文字位置
-    if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
-      progressTimeLeft.style.top = '525px';
-    }
-    if (progressTimeRight && progressTimeRight.classList.contains('show')) {
-      progressTimeRight.style.top = '525px';
-    }
+    // 注释掉调整时间文字位置的代码，保持位置固定
+    // if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
+    //   progressTimeLeft.style.top = '525px';
+    // }
+    // if (progressTimeRight && progressTimeRight.classList.contains('show')) {
+    //   progressTimeRight.style.top = '525px';
+    // }
   });
   
   // 点击进度条跳转到指定位置
@@ -413,13 +656,13 @@ document.addEventListener('DOMContentLoaded', function () {
     updateProgress(e);
     updateProgressTime();
     
-    // 调整时间文字位置
-    if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
-      progressTimeLeft.style.top = '530px';
-    }
-    if (progressTimeRight && progressTimeRight.classList.contains('show')) {
-      progressTimeRight.style.top = '530px';
-    }
+    // 注释掉调整时间文字位置的代码，保持位置固定
+    // if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
+    //   progressTimeLeft.style.top = '530px';
+    // }
+    // if (progressTimeRight && progressTimeRight.classList.contains('show')) {
+    //   progressTimeRight.style.top = '530px';
+    // }
     e.preventDefault();
   });
   
@@ -446,22 +689,22 @@ document.addEventListener('DOMContentLoaded', function () {
         
       if (isOverProgress) {
         progressContainer.classList.add('expanded');
-        // 调整时间文字位置
-        if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
-          progressTimeLeft.style.top = '530px';
-        }
-        if (progressTimeRight && progressTimeRight.classList.contains('show')) {
-          progressTimeRight.style.top = '530px';
-        }
+        // 注释掉调整时间文字位置的代码，保持位置固定
+        // if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
+        //   progressTimeLeft.style.top = '530px';
+        // }
+        // if (progressTimeRight && progressTimeRight.classList.contains('show')) {
+        //   progressTimeRight.style.top = '530px';
+        // }
       } else {
         progressContainer.classList.remove('expanded');
-        // 恢复时间文字位置
-        if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
-          progressTimeLeft.style.top = '525px';
-        }
-        if (progressTimeRight && progressTimeRight.classList.contains('show')) {
-          progressTimeRight.style.top = '525px';
-        }
+        // 注释掉调整时间文字位置的代码，保持位置固定
+        // if (progressTimeLeft && progressTimeLeft.classList.contains('show')) {
+        //   progressTimeLeft.style.top = '525px';
+        // }
+        // if (progressTimeRight && progressTimeRight.classList.contains('show')) {
+        //   progressTimeRight.style.top = '525px';
+        // }
       }
       
       // 更新时间显示
@@ -510,7 +753,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let rotation = 0;
     let blur = 100;
     let brightness = 1.2;
-    let hue = 0;
     
     // 动画参数
     const maxX = 70;
@@ -519,7 +761,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const maxRotation = 3;
     const maxBlur = 15;
     const maxBrightness = 0.2;
-    const maxHue = 360;
     
     // 随机目标值
     let targetX = (Math.random() * 2 - 1) * maxX;
@@ -528,7 +769,6 @@ document.addEventListener('DOMContentLoaded', function () {
     let targetRotation = (Math.random() * 2 - 1) * maxRotation;
     let targetBlur = 100 + (Math.random() * 2 - 1) * maxBlur;
     let targetBrightness = 1.2 + (Math.random() * 2 - 1) * maxBrightness;
-    let targetHue = Math.random() * maxHue;
     
     // 插值因子
     const lerpFactor = 0.02;
@@ -542,11 +782,10 @@ document.addEventListener('DOMContentLoaded', function () {
       rotation += (targetRotation - rotation) * lerpFactor;
       blur += (targetBlur - blur) * lerpFactor;
       brightness += (targetBrightness - brightness) * lerpFactor;
-      hue += (targetHue - hue) * lerpFactor;
       
       // 应用变换
       element.style.transform = `scale(${scale}) translate(${x}px, ${y}px) rotate(${rotation}deg)`;
-      element.style.filter = `blur(${blur}px) brightness(${brightness}) hue-rotate(${hue}deg)`;
+      element.style.filter = `blur(${blur}px) brightness(${brightness})`;
       
       // 随机改变目标值
       if (Math.random() < 0.02) {
@@ -568,10 +807,6 @@ document.addEventListener('DOMContentLoaded', function () {
       
       if (Math.random() < 0.02) {
         targetBrightness = 1.2 + (Math.random() * 2 - 1) * maxBrightness;
-      }
-      
-      if (Math.random() < 0.02) {
-        targetHue = Math.random() * maxHue;
       }
       
       // 继续动画

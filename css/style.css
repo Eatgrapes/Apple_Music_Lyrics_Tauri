@@ -133,15 +133,15 @@ body {
 
 .upload-container {
   position: absolute;
-  left: 100px;
-  top: 120px; /* 恢复到之前的位置，只让upload-box下移 */
+  left: 110px; /* 原来是100px，放大10% */
+  top: 50px; /* 原来是70px，再上移20px */
 }
 
 .upload-box {
-  width: 400px;
-  height: 400px;
+  width: 440px; /* 原来是400px，放大10% */
+  height: 440px; /* 原来是400px，放大10% */
   background-color: #000;
-  border-radius: 10px;
+  border-radius: 11px; /* 原来是10px，放大10% */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -153,11 +153,13 @@ body {
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
-  max-width: 400px;
-  max-height: 400px;
-  min-width: 400px;
-  min-height: 400px;
-  top: 30px; /* 只将upload-box下移20px */
+  max-width: 440px; /* 原来是400px，放大10% */
+  max-height: 440px; /* 原来是400px，放大10% */
+  min-width: 440px; /* 原来是400px，放大10% */
+  min-height: 440px; /* 原来是400px，放大10% */
+  top: -17px; /* 原来是-7px，再上移10px */
+  /* 添加阴影效果 */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .upload-box:hover {
@@ -186,7 +188,7 @@ body {
 }
 
 .plus-icon {
-  font-size: 200px;
+  font-size: 220px; /* 原来是200px，放大10% */
   font-weight: bold;
   color: #fff;
   line-height: 1;
@@ -196,7 +198,7 @@ body {
 }
 
 .music-icon {
-  font-size: 200px;
+  font-size: 220px; /* 原来是200px，放大10% */
   font-weight: bold;
   color: #fff;
   line-height: 1;
@@ -207,10 +209,10 @@ body {
 
 .song-title {
   position: absolute;
-  top: 460px; /* 从470px改为460px，再上移10px */
-  left: 6px;
+  top: 435px; /* 原来是455px，再上移20px */
+  left: 7px; /* 原来是6px，放大10% */
   color: white;
-  font-size: 15px;
+  font-size: 17px; /* 原来是15px，放大10% */
   font-weight: bold;
   max-width: 90%;
   overflow: hidden;
@@ -230,10 +232,10 @@ body {
 
 .song-artist {
   position: absolute;
-  top: 480px; /* 从490px改为480px，再上移10px */
-  left: 6px;
+  top: 458px; /* 原来是478px，再上移20px */
+  left: 7px; /* 原来是6px，放大10% */
   color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
+  font-size: 14px; /* 原来是13px，放大10% */
   font-weight: bold;
   max-width: 90%;
   overflow: hidden;
@@ -253,10 +255,10 @@ body {
 
 .more-button {
   position: absolute;
-  top: 465px; /* 从475px改为465px，再上移10px */
-  right: 10px;
-  width: 30px;
-  height: 30px;
+  top: 440px; /* 原来是460px，再上移20px */
+  right: 11px; /* 原来是10px，放大10% */
+  width: 33px; /* 原来是30px，放大10% */
+  height: 33px; /* 原来是30px，放大10% */
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 50%;
   display: flex;
@@ -277,17 +279,17 @@ body {
 }
 
 .more-icon {
-  width: 36px;
-  height: 36px;
+  width: 40px; /* 原来是36px，放大10% */
+  height: 40px; /* 原来是36px，放大10% */
   opacity: 0.9;
 }
 
 .progress-time {
   position: absolute;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 12px;
+  font-size: 13px; /* 原来是12px，放大10% */
   font-weight: bold;
-  top: 525px; /* 再向下移动10px */
+  top: 510px; /* 原来是500px，下移10px */
   transition: top 0.3s ease;
   pointer-events: none;
   user-select: none;
@@ -301,7 +303,7 @@ body {
 
 .progress-container:hover ~ .progress-time.show,
 .progress-time.show:hover {
-  top: 530px; /* 悬停时再向下移动10px */
+  top: 500px; /* 与普通状态保持一致，去掉下移效果 */
 }
 
 .progress-time-left {
@@ -314,10 +316,10 @@ body {
 
 .progress-container {
   position: absolute;
-  top: 520px; /* 从530px改为520px，再上移10px */
+  top: 500px; /* 原来是520px，再上移20px */
   left: 0;
-  width: 400px;
-  height: 6px;
+  width: 440px; /* 原来是400px，放大10% */
+  height: 7px; /* 原来是6px，放大10% */
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
   overflow: hidden;
@@ -332,38 +334,38 @@ body {
 }
 
 .progress-container:hover {
-  height: 12px;
-  top: 517px; /* 从527px改为517px，再上移10px */
+  height: 13px; /* 原来是12px，放大10% */
+  top: 500px; /* 原来是497px，与普通状态保持一致，去掉上移效果 */
   border-radius: 6px;
 }
 
 .progress-container.dragging {
-  height: 12px;
-  top: 517px; /* 从527px改为517px，再上移10px */
+  height: 13px; /* 原来是12px，放大10% */
+  top: 500px; /* 原来是497px，与普通状态保持一致，去掉上移效果 */
   border-radius: 6px;
 }
 
 .progress-container.dragging:hover {
-  height: 12px;
-  top: 517px; /* 从527px改为517px，再上移10px */
+  height: 13px; /* 原来是12px，放大10% */
+  top: 500px; /* 原来是497px，与普通状态保持一致，去掉上移效果 */
   border-radius: 6px;
 }
 
 @keyframes expand {
   0% {
-    height: 6px;
-    top: 520px; /* 从530px改为520px，再上移10px */
+    height: 7px; /* 原来是6px，放大10% */
+    top: 500px; /* 保持一致，去掉移动效果 */
     border-radius: 3px;
   }
   50% {
-    height: 14px;
-    top: 515px; /* 从525px改为515px，再上移10px */
-    border-radius: 7px;
+    height: 15px; /* 原来是14px，放大10% */
+    top: 500px; /* 保持一致，去掉移动效果 */
+    border-radius: 8px; /* 原来是7px，放大10% */
   }
   100% {
-    height: 12px;
-    top: 517px; /* 从527px改为517px，再上移10px */
-    border-radius: 6px;
+    height: 13px; /* 原来是12px，放大10% */
+    top: 500px; /* 保持一致，去掉移动效果 */
+    border-radius: 7px; /* 原来是6px，放大10% */
   }
 }
 
@@ -401,8 +403,8 @@ body {
   top: 50%;
   left: 0%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
+  width: 13px; /* 原来是12px，放大10% */
+  height: 13px; /* 原来是12px，放大10% */
   background-color: #fff;
   border-radius: 50%;
   opacity: 0;
@@ -425,11 +427,11 @@ body {
 
 .play-button-container {
   position: absolute;
-  top: 570px; /* 从550px改为570px，向下移动20px */
+  top: 555px; /* 原来是575px，再上移20px */
   left: 50%;
   transform: translateX(-50%);
-  width: 60px; /* 从50px改为60px，稍微增大 */
-  height: 60px; /* 从50px改为60px，稍微增大 */
+  width: 66px; /* 原来是60px，放大10% */
+  height: 66px; /* 原来是60px，放大10% */
   display: none;
   justify-content: center;
   align-items: center;
@@ -454,10 +456,10 @@ body {
 
 .volume-container {
   position: absolute;
-  top: 655px; /* 从645px改为655px，再向下移动10px */
+  top: 650px; /* 原来是670px，再上移20px */
   left: 0;
-  width: 400px;
-  height: 20px;
+  width: 440px; /* 原来是400px，放大10% */
+  height: 22px; /* 原来是20px，放大10% */
   display: none;
   justify-content: center;
   align-items: center;
@@ -475,10 +477,10 @@ body {
 }
 
 .volume-icon {
-  width: 20px;
-  height: 20px;
+  width: 22px; /* 原来是20px，放大10% */
+  height: 22px; /* 原来是20px，放大10% */
   filter: invert(100%);
-  margin: 0 10px;
+  margin: 0 11px; /* 原来是10px，放大10% */
 }
 
 .volume-low {
@@ -488,23 +490,23 @@ body {
 .volume-bar {
   position: relative;
   width: 100%;
-  height: 6px;
+  height: 7px; /* 原来是6px，放大10% */
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 3px;
   overflow: hidden;
   cursor: pointer;
   flex-grow: 1;
-  max-width: 300px;
+  max-width: 330px; /* 原来是300px，放大10% */
   transition: height 0.3s ease, border-radius 0.3s ease;
 }
 
 .volume-bar:hover {
-  height: 12px;
+  height: 13px; /* 原来是12px，放大10% */
   border-radius: 6px;
 }
 
 .volume-bar.expanded {
-  height: 12px;
+  height: 13px; /* 原来是12px，放大10% */
   border-radius: 6px;
 }
 
@@ -547,6 +549,71 @@ body {
   opacity: 1;
 }
 */
+
+/* 歌词容器 */
+.lyrics-container {
+  position: absolute;
+  left: 620px; /* 靠左位置 */
+  top: 180px; /* 向下移动 */
+  width: 900px;
+  height: 550px;
+  z-index: 999999; /* 最高层级 */
+  pointer-events: none; /* 避免拦截鼠标事件 */
+  padding-left: 30px; /* 左侧内边距 */
+  padding-right: 50px;
+  box-sizing: border-box; /* 修复错误：正确值应为border-box */
+  overflow: visible; /* 允许内容超出容器 */
+}
+
+.lyrics-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  z-index: 999999; /* 最高层级 */
+  overflow: visible; /* 允许内容超出容器 */
+}
+
+.lyric-line {
+  position: absolute;
+  width: 800px;
+  text-align: left;
+  color: rgba(255, 255, 255, 0.5); /* 默认半透明 */
+  font-size: 40px; /* 调小字体大小 */
+  font-weight: 600;
+  transition: all 0.5s ease;
+  white-space: normal; /* 允许自动换行 */
+  overflow: visible; /* 允许内容超出 */
+  text-overflow: ellipsis;
+  padding: 0;
+  box-sizing: border-box;
+  line-height: 1.4;
+  z-index: 999999; /* 最高层级 */
+  left: 0;
+  transform: translate(0, 0); /* 固定水平位置 */
+  word-wrap: break-word; /* 允许长单词换行 */
+  word-break: break-word; /* 在适当位置换行 */
+}
+
+.lyric-line.active {
+  color: white;
+  font-size: 40px; /* 与默认大小相同，移除放大效果 */
+  z-index: 1000000; /* 当前播放歌词在最上层 */
+}
+
+.lyric-line.past {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.no-lyrics {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 24px;
+  text-align: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 999999;
+}
 
 /* 大屏幕设备优化 */
 @media screen and (min-width: 1200px) {
@@ -597,6 +664,7 @@ body {
   .progress-container {
     top: 370px;
     width: 300px;
+    width: 300px;
   }
 }
 
@@ -625,7 +693,6 @@ body {
     top: 310px;
     font-size: 11px;
   }
-
   .more-button {
     top: 295px;
   }
